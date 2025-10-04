@@ -1,0 +1,23 @@
+# Example Terraform variables file
+# Copy this file to terraform.tfvars and fill in your values
+
+# AWS Configuration
+aws_region = "us-east-1"
+
+# EC2 Configuration
+instance_type = "t3.micro"
+
+# SSH Key (generate with: ssh-keygen -t rsa -b 4096 -f ~/.ssh/threat-detection-key)
+# Then copy the public key content here
+ssh_public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC... your-public-key-here"
+
+# Email for security alerts (must be verified in AWS SES or SNS)
+alert_email = "your-email@example.com"
+
+# Enable auto-remediation (Lambda function that stops instance on high-severity findings)
+# Set to true for automatic remediation, false for alerts only
+enable_auto_remediation = false
+
+# Environment and project settings
+environment = "lab"
+project_name = "threat-detection"

@@ -8,6 +8,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    archive = {
+      source  = "hashicorp/archive"
+      version = "~> 2.0"
+    }
   }
 }
 
@@ -21,6 +25,12 @@ data "aws_availability_zones" "available" {
 }
 
 data "aws_caller_identity" "current" {}
+
+data "archive_file" "auto_remediation_zip" {
+  type        = "zip"
+  source_dir  = "${path.module}/lambda"
+  output_path = "${path.module}/lambda_function.zip"
+}
 
 # VPC and Networking
 resource "aws_vpc" "main" {
@@ -120,9 +130,9 @@ resource "aws_key_pair" "main" {
 resource "aws_instance" "target" {
   ami                    = data.aws_ami.amazon_linux.id
   instance_type          = var.instance_type
-  key_name              = aws_key_pair.main.key_name
+  key_name               = aws_key_pair.main.key_name
   vpc_security_group_ids = [aws_security_group.ec2.id]
-  subnet_id             = aws_subnet.public.id
+  subnet_id              = aws_subnet.public.id
 
   user_data = base64encode(templatefile("${path.module}/user_data.sh", {
     instance_name = "threat-detection-target"
@@ -280,12 +290,13 @@ EOF
 resource "aws_lambda_function" "auto_remediation" {
   count = var.enable_auto_remediation ? 1 : 0
 
-  filename         = "${path.module}/lambda_function.zip"
+  filename         = data.archive_file.auto_remediation_zip.output_path
   function_name    = "threat-detection-auto-remediation"
-  role            = aws_iam_role.lambda_role[0].arn
-  handler         = "index.handler"
-  runtime         = "python3.9"
-  timeout         = 30
+  role             = aws_iam_role.lambda_role[0].arn
+  handler          = "index.handler"
+  runtime          = "python3.9"
+  source_code_hash = data.archive_file.auto_remediation_zip.output_base64sha256
+  timeout          = 30
 
   environment {
     variables = {

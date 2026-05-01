@@ -4,16 +4,7 @@
 [![Terraform](https://img.shields.io/badge/Terraform-Infrastructure-purple?style=for-the-badge&logo=terraform)](https://terraform.io/)
 [![Security](https://img.shields.io/badge/Security-GuardDuty-red?style=for-the-badge&logo=security)](https://aws.amazon.com/guardduty/)
 
-A hands-on lab demonstrating AWS GuardDuty, CloudWatch, and SNS for automated threat detection and incident response.
-
-This project simulates a real-world security incident scenario where a misconfigured EC2 instance is attacked, triggering an automated detection and alert workflow using AWS security services.
-
-## Why This Project Matters
-
-- **Real-world relevance**: Mirrors actual SOC and cloud security automation tasks
-- **Job-ready skills**: Demonstrates threat detection, not just infrastructure building
-- **Security mindset**: Teaches you to think like an engineer who protects systems
-- **Industry standard**: Uses tools and patterns employed by cloud security engineers and DevSecOps teams
+A hands-on lab simulating a real-world AWS security incident — misconfigured EC2 attacked, GuardDuty detects it, CloudWatch triggers automated alerting and optional Lambda remediation, all provisioned with Terraform.
 
 ## Architecture Overview
 
@@ -57,7 +48,7 @@ flowchart TD
 ### 1. Clone and Setup
 
 ```bash
-git clone https://github.com/yourusername/cloud-threat-detection-lab.git
+git clone https://github.com/pantelovich/cloud-threat-detection-lab.git
 cd cloud-threat-detection-lab
 ```
 
@@ -66,14 +57,13 @@ cd cloud-threat-detection-lab
 ```bash
 cd infra
 cp terraform.tfvars.example terraform.tfvars
-# Edit terraform.tfvars with your values
 ```
 
 Required variables:
 ```hcl
-aws_region = "us-east-1"
-ssh_public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC... your-public-key"
-alert_email = "your-email@example.com"
+aws_region              = "us-east-1"
+ssh_public_key          = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC... your-public-key"
+alert_email             = "your-email@example.com"
 enable_auto_remediation = false  # Set to true for auto-stopping instances
 ```
 
@@ -83,7 +73,7 @@ enable_auto_remediation = false  # Set to true for auto-stopping instances
 # Using the deployment script
 ../scripts/deploy.sh -i -a
 
-# Or manually with Terraform
+# Or manually
 terraform init
 terraform apply -auto-approve
 ```
@@ -97,169 +87,87 @@ Check your email and confirm the SNS subscription to receive alerts.
 Wait 5-10 minutes for GuardDuty to initialize, then run:
 
 ```bash
-# Get the target IP from Terraform output
 terraform output instance_public_ip
-
-# Run threat simulation
 ../scripts/test_threats.sh <target-ip>
 ```
 
 ## Testing Scenarios
 
-The lab includes several testing scenarios:
-
-### 1. Port Scanning
+### Port Scanning
 ```bash
 ./scripts/test_threats.sh <target-ip> -t portscan
 ```
-Simulates reconnaissance activities that GuardDuty detects as port scanning.
 
-### 2. SSH Brute Force
+### SSH Brute Force
 ```bash
 ./scripts/test_threats.sh <target-ip> -t ssh-brute
 ```
-Attempts multiple SSH login attempts with common credentials.
 
-### 3. Comprehensive Attack Simulation
+### Comprehensive Attack Simulation
 ```bash
 ./scripts/test_threats.sh <target-ip>
 ```
-Runs all attack vectors to trigger multiple GuardDuty findings.
 
 ## Expected Results
-
-After running the tests, you should see:
 
 1. **GuardDuty Findings** (5-15 minutes):
    - `Recon:EC2/PortProbeUnprotectedPort`
    - `UnauthorizedAPICall:EC2/SSHBruteForce`
    - `Recon:EC2/Portscan`
 
-2. **Email Alerts** via SNS:
-   ```
-   AWS GuardDuty Security Alert
-   
-   Finding ID: 12345678901234567890123456789012
-   Type: Recon:EC2/PortProbeUnprotectedPort
-   Severity: 4.0
-   Title: Unprotected port 22 on i-1234567890abcdef0 is being probed
-   ...
-   ```
+2. **Email Alerts** via SNS with finding ID, type, severity, and affected resource
 
-3. **Auto-Remediation** (if enabled):
-   - High-severity findings trigger Lambda function
-   - Instance automatically stopped
-   - CloudWatch metrics recorded
+3. **Auto-Remediation** (if enabled): high-severity findings trigger Lambda, instance stops automatically
 
 ## Project Structure
 
 ```
 cloud-threat-detection-lab/
-├── infra/                          # Terraform infrastructure
-│   ├── main.tf                     # Main infrastructure definition
-│   ├── variables.tf                # Variable definitions
-│   ├── outputs.tf                  # Output values
-│   ├── user_data.sh               # EC2 initialization script
-│   ├── terraform.tfvars.example   # Example variables file
-│   ├── lambda/                    # Lambda function code
-│   │   └── index.py              # Auto-remediation function
-│   ├── lambda_function.zip        # Packaged Lambda function
-│   └── package_lambda.sh         # Lambda packaging script
-├── scripts/                       # Utility scripts
-│   ├── deploy.sh                 # Deployment automation
-│   └── test_threats.sh          # Threat simulation script
-└── README.md                     # This file
+├── infra/
+│   ├── main.tf
+│   ├── variables.tf
+│   ├── outputs.tf
+│   ├── user_data.sh
+│   ├── terraform.tfvars.example
+│   ├── lambda/
+│   │   └── index.py
+│   ├── lambda_function.zip
+│   └── package_lambda.sh
+├── scripts/
+│   ├── deploy.sh
+│   └── test_threats.sh
+└── README.md
 ```
 
-## Configuration Options
-
-### Terraform Variables
+## Terraform Variables
 
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
-| `aws_region` | AWS region for resources | `us-east-1` | No |
+| `aws_region` | AWS region | `us-east-1` | No |
 | `instance_type` | EC2 instance type | `t3.micro` | No |
 | `ssh_public_key` | SSH public key for EC2 access | - | Yes |
-| `alert_email` | Email for security alerts | - | Yes |
+| `alert_email` | Email for alerts | - | Yes |
 | `enable_auto_remediation` | Enable Lambda auto-remediation | `false` | No |
-
-### Threat Types
-
-The testing script supports various threat simulation types:
-
-- `portscan`: Network reconnaissance
-- `ssh-brute`: SSH brute force attacks
-- `http`: HTTP enumeration
-- `suspicious`: General suspicious activity
-- `all`: All attack vectors (default)
 
 ## Security Considerations
 
-**Important Security Notes:**
-
-- This lab creates intentionally vulnerable resources
 - Only deploy in isolated AWS accounts or lab environments
-- The target instance has open SSH access and weak credentials
-- Always destroy infrastructure after testing
-- Never use these configurations in production
+- The target instance has open SSH access and weak credentials by design
+- Always destroy infrastructure after testing — never leave this running
 
 ## Cleanup
 
-To destroy all infrastructure:
-
 ```bash
-cd infra
-terraform destroy -auto-approve
+cd infra && terraform destroy -auto-approve
 ```
-
-Or use the deployment script:
-
-```bash
-./scripts/deploy.sh -d
-```
-
-## Learning Outcomes
-
-After completing this lab, you'll understand:
-
-- **GuardDuty Configuration**: How to set up and configure AWS GuardDuty
-- **Event-Driven Architecture**: Using CloudWatch Events for security automation
-- **Alert Pipelines**: Building notification systems with SNS
-- **Auto-Remediation**: Implementing automated response to security incidents
-- **Threat Simulation**: Testing security controls in controlled environments
-- **Infrastructure as Code**: Managing security infrastructure with Terraform
 
 ## Next Steps
 
-Extend this lab with:
-
-1. **Security Hub Integration**: Forward findings to AWS Security Hub
-2. **Slack Notifications**: Add Slack webhook for team alerts
-3. **Enhanced Remediation**: More sophisticated response actions
-4. **Log Analysis**: Store and analyze security logs in S3/Elasticsearch
-5. **Compliance Reporting**: Generate compliance reports from findings
-
-## Additional Resources
-
-- [AWS GuardDuty Documentation](https://docs.aws.amazon.com/guardduty/)
-- [CloudWatch Events Documentation](https://docs.aws.amazon.com/eventbridge/)
-- [SNS Documentation](https://docs.aws.amazon.com/sns/)
-- [Lambda Documentation](https://docs.aws.amazon.com/lambda/)
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+- Security Hub integration for centralised findings
+- Slack webhook alerts
+- Quarantine VPC isolation instead of stopping instances
+- S3/Elasticsearch log storage and analysis
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Disclaimer
-
-This project is for educational and testing purposes only. The configurations used are intentionally vulnerable and should never be deployed in production environments. Users are responsible for ensuring compliance with their organization's security policies and applicable laws and regulations.
-
----
-
-**Happy Learning!**
-
-*Built with for the cloud security community*
+MIT — see [LICENSE](LICENSE) for details.

@@ -42,7 +42,7 @@ output "security_group_id" {
 
 output "testing_instructions" {
   description = "Instructions for testing the setup"
-  value = <<EOF
+  value       = <<EOF
 
 CLOUD THREAT DETECTION LAB - TESTING INSTRUCTIONS
 
